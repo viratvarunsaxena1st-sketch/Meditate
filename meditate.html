@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deep Focus v3</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --text: #ffffff;
+            --accent: #333333;
+            --highlight: #eaeaea;
+            --cylinder-bg: #111;
+            --red: #cf6679;
+            --blue: #64b5f6; /* Color for Focused */
+            --green: #81c784; /* Color for Open */
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- UTILS --- */
+        .hidden { display: none !important; }
+        .view {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.3s;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text);
+            font-family: inherit;
+        }
+
+        /* --- MAIN MENU --- */
+        .menu-container {
+            width: 80%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            text-align: center;
+        }
+
+        h1 { font-weight: 200; letter-spacing: 2px; margin-bottom: 20px; }
+
+        /* Category Selector */
+        .category-selector {
+            display: flex;
+            background: #111;
+            border-radius: 30px;
+            padding: 4px;
+            margin-bottom: 10px;
+        }
+        .cat-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            color: #666;
+            transition: all 0.2s;
+        }
+        .cat-btn.active {
+            background: #333;
+            color: white;
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+
+        input[type="number"] {
+            background: var(--accent);
+            border: 1px solid #444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            width: 100px;
+            text-align: center;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .btn-main {
+            background: var(--highlight);
+            color: black;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: transform 0.1s;
+        }
+        .btn-main:active { transform: scale(0.95); }
+
+        .btn-link {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            text-decoration: underline;
+        }
+
+        /* --- ACTIVE SESSION --- */
+        #timer-display {
+            position: absolute;
+            top: 15%;
+            font-size: 1.5rem;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+            color: #666;
+        }
+
+        .focus-btn-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #focus-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #222 0%, #000 70%);
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        #focus-btn:active {
+            border-color: #666;
+            transform: scale(0.96);
+            background: #111;
+        }
+
+        .helper-text {
+            position: absolute;
+            bottom: 20%;
+            color: #444;
+            font-size: 0.8rem;
+            pointer-events: none;
+        }
+
+        .btn-end-early {
+            position: absolute;
+            bottom: 8%;
+            color: var(--red);
+            font-size: 0.9rem;
+            opacity: 0.7;
+            padding: 10px 20px;
+        }
+
+        /* --- CYLINDER MODAL --- */
+        #distraction-modal {
+            background: rgba(0,0,0,0.95);
+            z-index: 100;
+        }
+
+        .picker-container {
+            display: flex;
+            gap: 20px;
+            height: 200px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .picker-highlight {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            transform: translateY(-50%);
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .cylinder-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .cylinder {
+            width: 80px;
+            height: 200px;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            background: var(--cylinder-bg);
+            border-radius: 12px;
+            scrollbar-width: none;
+        }
+        .cylinder::-webkit-scrollbar { display: none; }
+
+        .cylinder-item {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            scroll-snap-align: center;
+            font-size: 1.2rem;
+            color: #888;
+        }
+        .spacer { height: 75px; } 
+        .modal-title { margin-bottom: 20px; color: #888; }
+
+        /* --- HISTORY VIEW --- */
+        .history-container {
+            width: 90%;
+            max-width: 500px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        select.week-dropdown {
+            width: 100%;
+            padding: 12px;
+            background: #111;
+            color: white;
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        /* History Filter Tabs */
+        .history-filter {
+            display: flex;
+            background: #111;
+            border-radius: 8px;
+            padding: 3px;
+            margin-bottom: 20px;
+        }
+        .filter-btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.75rem;
+            color: #666;
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .filter-btn.active {
+            background: #333;
+            color: white;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #222;
+        }
+
+        .stat-box {
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-val { font-size: 1.4rem; font-weight: bold; display: block; }
+        .stat-lbl { font-size: 0.7rem; color: #666; text-transform: uppercase; margin-top: 5px; display: block;}
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #222;
+            font-size: 0.9rem;
+            align-items: center;
+        }
+        
+        .session-meta { display: flex; flex-direction: column; gap: 4px; }
+        
+        /* Tag Styling */
+        .session-tag { 
+            font-size: 0.65rem; 
+            text-transform: uppercase; 
+            padding: 3px 6px; 
+            border-radius: 4px; 
+            width: fit-content; 
+            font-weight: 700;
+        }
+        .tag-fam { color: var(--blue); background: rgba(100, 181, 246, 0.15); }
+        .tag-omm { color: var(--green); background: rgba(129, 199, 132, 0.15); }
+        
+        .session-right { text-align: right; }
+        .session-acc { font-weight: bold; color: var(--highlight); font-size: 1.1rem; }
+        .session-dur { color: #666; font-size: 0.8rem; }
+
+    </style>
+</head>
+<body>
+
+    <div id="view-menu" class="view">
+        <h1>UNBOUND</h1>
+        
+        <div class="menu-container">
+            <div>
+                <label style="margin-bottom:8px; display:block;">Meditation Type</label>
+                <div class="category-selector">
+                    <div class="cat-btn active" onclick="setCategory(this, 'Focused Attention')">Focused</div>
+                    <div class="cat-btn" onclick="setCategory(this, 'Open Monitoring')">Open</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Duration (Minutes)</label>
+                <input type="number" id="inp-duration" value="15" min="1" max="180">
+            </div>
+
+            <div class="toggle-container">
+                <input type="checkbox" id="inp-show-timer" checked>
+                <label for="inp-show-timer" style="margin:0">Show Timer</label>
+            </div>
+
+            <button class="btn-main" onclick="startSession()">Begin Session</button>
+            <button class="btn-link" onclick="showHistory()">Progress History</button>
+        </div>
+    </div>
+
+    <div id="view-session" class="view hidden">
+        <div id="timer-display">00:00</div>
+        
+        <div class="focus-btn-container">
+            <button id="focus-btn" onclick="openDistractionModal()"></button>
+        </div>
+
+        <div class="helper-text">Tap button if focus is lost</div>
+        <button class="btn-end-early" onclick="endSession(true)">End Session Early</button>
+    </div>
+
+    <div id="distraction-modal" class="view hidden">
+        <div class="modal-title">How long were you distracted?</div>
+        
+        <div class="picker-container">
+            <div class="picker-highlight"></div>
+            
+            <div class="cylinder-group">
+                <label>Minutes</label>
+                <div class="cylinder" id="cyl-min">
+                    <div class="spacer"></div>
+                    <div class="spacer"></div>
+                </div>
+            </div>
+
+            <div class="cylinder-group">
+                <label>Seconds</label>
+                <div class="cylinder" id="cyl-sec">
+                    <div class="spacer"></div>
+                    <div class="spacer"></div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-main" onclick="confirmDistraction()">Log & Resume</button>
+    </div>
+
+    <div id="view-summary" class="view hidden">
+        <h1 style="margin-bottom: 10px">Session Complete</h1>
+        <div style="font-size: 4rem; font-weight: bold; margin-bottom: 10px;" id="summary-acc">--%</div>
+        <div style="color: #666; margin-bottom: 40px;">Accuracy Score</div>
+        
+        <div style="margin-bottom: 20px; color: #888">
+            Duration: <span id="summary-dur" style="color:white">--</span> min
+        </div>
+
+        <button class="btn-main" onclick="goHome()">Finish</button>
+    </div>
+
+    <div id="view-history" class="view hidden">
+        <div class="history-container">
+            <div class="history-header">
+                <h2>Progress</h2>
+                <button onclick="goHome()" style="font-size: 1.5rem;">&times;</button>
+            </div>
+
+            <select id="week-select" class="week-dropdown" onchange="renderWeekStats()"></select>
+
+            <div class="history-filter">
+                <button class="filter-btn active" id="filt-all" onclick="setHistoryFilter('All')">All</button>
+                <button class="filter-btn" id="filt-fam" onclick="setHistoryFilter('Focused Attention')">FAM</button>
+                <button class="filter-btn" id="filt-omm" onclick="setHistoryFilter('Open Monitoring')">OMM</button>
+            </div>
+
+            <div class="stats-summary">
+                <div class="stat-box">
+                    <span class="stat-val" id="week-avg-acc">--</span>
+                    <span class="stat-lbl">Avg Accuracy</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-val" id="week-avg-dur">--</span>
+                    <span class="stat-lbl">Avg Duration</span>
+                </div>
+            </div>
+
+            <div class="session-list" id="session-list"></div>
+        </div>
+    </div>
+
+<script>
+    // --- STATE ---
+    let session = {
+        category: 'Focused Attention',
+        durationSec: 0,
+        elapsedSec: 0,
+        distractedSec: 0,
+        interval: null,
+        startTime: null
+    };
+
+    let historyFilter = 'All'; // State for history filtering
+
+    // --- DOM ELEMENTS ---
+    const views = {
+        menu: document.getElementById('view-menu'),
+        session: document.getElementById('view-session'),
+        modal: document.getElementById('distraction-modal'),
+        summary: document.getElementById('view-summary'),
+        history: document.getElementById('view-history')
+    };
+
+    const els = {
+        timer: document.getElementById('timer-display'),
+        cylMin: document.getElementById('cyl-min'),
+        cylSec: document.getElementById('cyl-sec')
+    };
+
+    // --- INITIALIZATION ---
+    function initCylinders() {
+        populateCylinder(els.cylMin, 0, 180); 
+        populateCylinder(els.cylSec, 1, 59);
+    }
+
+    function populateCylinder(el, start, end) {
+        const spacers = el.querySelectorAll('.spacer');
+        el.innerHTML = '';
+        el.appendChild(spacers[0].cloneNode(true));
+        for (let i = start; i <= end; i++) {
+            let div = document.createElement('div');
+            div.className = 'cylinder-item';
+            div.innerText = i.toString().padStart(2, '0');
+            div.dataset.val = i;
+            el.appendChild(div);
+        }
+        el.appendChild(spacers[0].cloneNode(true));
+    }
+
+    initCylinders();
+
+    // --- NAVIGATION ---
+    function switchView(viewName) {
+        Object.values(views).forEach(el => el.classList.add('hidden'));
+        views[viewName].classList.remove('hidden');
+    }
+
+    function goHome() {
+        switchView('menu');
+    }
+
+    function setCategory(el, catName) {
+        session.category = catName;
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    // --- SESSION LOGIC ---
+    function startSession() {
+        const mins = parseInt(document.getElementById('inp-duration').value);
+        if(!mins || mins <= 0) return alert("Please enter a valid duration");
+
+        const showTimer = document.getElementById('inp-show-timer').checked;
+
+        session.durationSec = mins * 60;
+        session.elapsedSec = 0;
+        session.distractedSec = 0;
+        
+        els.timer.style.opacity = showTimer ? "1" : "0";
+        updateTimerDisplay();
+
+        switchView('session');
+        session.interval = setInterval(tick, 1000);
+    }
+
+    function tick() {
+        session.elapsedSec++;
+        updateTimerDisplay();
+
+        if (session.elapsedSec >= session.durationSec) {
+            endSession();
+        }
+    }
+
+    function updateTimerDisplay() {
+        const rem = session.durationSec - session.elapsedSec;
+        const m = Math.floor(rem / 60).toString().padStart(2, '0');
+        const s = (rem % 60).toString().padStart(2, '0');
+        els.timer.innerText = `${m}:${s}`;
+    }
+
+    function openDistractionModal() {
+        clearInterval(session.interval);
+        els.cylMin.scrollTop = 0;
+        els.cylSec.scrollTop = 0;
+        views.modal.classList.remove('hidden');
+    }
+
+    function getScrollValue(el) {
+        const itemHeight = 50; 
+        const scrollPos = el.scrollTop;
+        const index = Math.round(scrollPos / itemHeight);
+        const items = el.querySelectorAll('.cylinder-item');
+        if(items[index]) return parseInt(items[index].dataset.val);
+        return 0; 
+    }
+
+    function confirmDistraction() {
+        const m = getScrollValue(els.cylMin);
+        const s = getScrollValue(els.cylSec);
+        session.distractedSec += (m * 60) + s;
+        views.modal.classList.add('hidden');
+        session.interval = setInterval(tick, 1000);
+    }
+
+    function endSession(early = false) {
+        clearInterval(session.interval);
+        
+        if (early) {
+            if (session.elapsedSec < 10) return goHome(); 
+            session.durationSec = session.elapsedSec;
+        }
+
+        let ratio = session.distractedSec / session.durationSec;
+        if (ratio > 1) ratio = 1;
+        
+        const accuracy = Math.round(100 - (ratio * 100));
+        const durationMin = Math.max(1, Math.round(session.durationSec / 60));
+
+        saveData(accuracy, durationMin, session.category);
+
+        document.getElementById('summary-acc').innerText = accuracy + "%";
+        document.getElementById('summary-dur').innerText = durationMin;
+        switchView('summary');
+    }
+
+    // --- DATA & HISTORY ---
+    function saveData(accuracy, duration, category) {
+        const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
+        data.push({
+            timestamp: Date.now(),
+            accuracy: accuracy,
+            duration: duration,
+            category: category
+        });
+        localStorage.setItem('meditation_data_v2', JSON.stringify(data));
+    }
+
+    function getStartOfWeek(date) {
+        const d = new Date(date);
+        const day = d.getDay(); 
+        const diff = d.getDate() - day;
+        d.setDate(diff);
+        d.setHours(0,0,0,0);
+        return d;
+    }
+
+    function showHistory() {
+        const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
+        const weekSelect = document.getElementById('week-select');
+        
+        if (data.length === 0) {
+            alert("No sessions recorded yet.");
+            return;
+        }
+
+        const weeks = {};
+        data.forEach(entry => {
+            const date = new Date(entry.timestamp);
+            const weekStart = getStartOfWeek(date).toISOString();
+            if (!weeks[weekStart]) weeks[weekStart] = [];
+            weeks[weekStart].push(entry);
+        });
+
+        weekSelect.innerHTML = '';
+        const sortedWeeks = Object.keys(weeks).sort().reverse();
+        
+        sortedWeeks.forEach(weekKey => {
+            const sessions = weeks[weekKey];
+            const avgDur = Math.round(sessions.reduce((a, b) => a + b.duration, 0) / sessions.length);
+            const count = sessions.length;
+            const d = new Date(weekKey);
+            const dateStr = `${d.getDate()}/${d.getMonth()+1}`;
+            
+            const opt = document.createElement('option');
+            opt.value = weekKey;
+            opt.text = `Week of ${dateStr} - (${count} sessions)`;
+            weekSelect.appendChild(opt);
+        });
+
+        switchView('history');
+        
+        // Reset filter to All when opening history
+        setHistoryFilter('All'); 
+    }
+
+    function setHistoryFilter(filter) {
+        historyFilter = filter;
+        
+        // Update UI Tabs
+        document.getElementById('filt-all').classList.toggle('active', filter === 'All');
+        document.getElementById('filt-fam').classList.toggle('active', filter === 'Focused Attention');
+        document.getElementById('filt-omm').classList.toggle('active', filter === 'Open Monitoring');
+
+        renderWeekStats();
+    }
+
+    function renderWeekStats() {
+        const weekKey = document.getElementById('week-select').value;
+        const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
+        const list = document.getElementById('session-list');
+        
+        // 1. Get all sessions for this week
+        let sessions = data.filter(entry => {
+            return getStartOfWeek(new Date(entry.timestamp)).toISOString() === weekKey;
+        }).sort((a,b) => b.timestamp - a.timestamp);
+
+        // 2. Apply Sub-Filter
+        if (historyFilter !== 'All') {
+            sessions = sessions.filter(s => s.category === historyFilter);
+        }
+
+        // 3. Calculate Stats for the Filtered Set
+        let totalAcc = 0;
+        let totalDur = 0;
+        
+        sessions.forEach(s => {
+            totalAcc += s.accuracy;
+            totalDur += s.duration;
+        });
+
+        const len = sessions.length; 
+        
+        if (len > 0) {
+            document.getElementById('week-avg-acc').innerText = Math.round(totalAcc / len) + "%";
+            document.getElementById('week-avg-dur').innerText = Math.round(totalDur / len) + "m";
+        } else {
+            document.getElementById('week-avg-acc').innerText = "--";
+            document.getElementById('week-avg-dur').innerText = "--";
+        }
+
+        // 4. Render List
+        list.innerHTML = '';
+        
+        if (len === 0) {
+            list.innerHTML = '<div style="text-align:center; margin-top:30px; color:#444; font-size:0.9rem">No sessions found for this category.</div>';
+            return;
+        }
+
+        sessions.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'session-item';
+            const date = new Date(s.timestamp);
+            
+            const isFam = s.category === 'Focused Attention';
+            const catLabel = isFam ? 'FAM' : 'OMM';
+            const tagClass = isFam ? 'tag-fam' : 'tag-omm';
+            
+            div.innerHTML = `
+                <div class="session-meta">
+                    <div style="font-size:0.9rem">${date.toLocaleDateString()} <span style="color:#666">${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
+                    <div class="session-tag ${tagClass}">${catLabel}</div>
+                </div>
+                <div class="session-right">
+                    <div class="session-acc">${s.accuracy}%</div>
+                    <div class="session-dur">${s.duration} min</div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+</script>
+</body>
+</html>
