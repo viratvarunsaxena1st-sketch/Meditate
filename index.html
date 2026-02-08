@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Deep Focus v3</title>
+    <title>Deep Focus v4</title>
     <style>
         :root {
             --bg: #000000;
@@ -12,8 +12,8 @@
             --highlight: #eaeaea;
             --cylinder-bg: #111;
             --red: #cf6679;
-            --blue: #64b5f6; /* Color for Focused */
-            --green: #81c784; /* Color for Open */
+            --blue: #64b5f6;
+            --green: #81c784;
         }
 
         body {
@@ -66,7 +66,6 @@
 
         h1 { font-weight: 200; letter-spacing: 2px; margin-bottom: 20px; }
 
-        /* Category Selector */
         .category-selector {
             display: flex;
             background: #111;
@@ -258,19 +257,35 @@
             margin-bottom: 20px;
         }
 
+        .history-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
         select.week-dropdown {
-            width: 100%;
+            flex: 1;
             padding: 12px;
             background: #111;
             color: white;
             border: 1px solid #333;
             border-radius: 8px;
-            font-size: 1rem;
-            margin-bottom: 15px;
+            font-size: 0.9rem;
             outline: none;
         }
 
-        /* History Filter Tabs */
+        .btn-clear {
+            padding: 12px;
+            font-size: 0.7rem;
+            color: var(--red);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid rgba(207, 102, 121, 0.3);
+            border-radius: 8px;
+        }
+
         .history-filter {
             display: flex;
             background: #111;
@@ -326,8 +341,6 @@
         }
         
         .session-meta { display: flex; flex-direction: column; gap: 4px; }
-        
-        /* Tag Styling */
         .session-tag { 
             font-size: 0.65rem; 
             text-transform: uppercase; 
@@ -349,7 +362,6 @@
 
     <div id="view-menu" class="view">
         <h1>UNBOUND</h1>
-        
         <div class="menu-container">
             <div>
                 <label style="margin-bottom:8px; display:block;">Meditation Type</label>
@@ -358,17 +370,14 @@
                     <div class="cat-btn" onclick="setCategory(this, 'Open Monitoring')">Open</div>
                 </div>
             </div>
-
             <div class="input-group">
                 <label>Duration (Minutes)</label>
                 <input type="number" id="inp-duration" value="15" min="1" max="180">
             </div>
-
             <div class="toggle-container">
                 <input type="checkbox" id="inp-show-timer" checked>
                 <label for="inp-show-timer" style="margin:0">Show Timer</label>
             </div>
-
             <button class="btn-main" onclick="startSession()">Begin Session</button>
             <button class="btn-link" onclick="showHistory()">Progress History</button>
         </div>
@@ -376,38 +385,26 @@
 
     <div id="view-session" class="view hidden">
         <div id="timer-display">00:00</div>
-        
         <div class="focus-btn-container">
             <button id="focus-btn" onclick="openDistractionModal()"></button>
         </div>
-
         <div class="helper-text">Tap button if focus is lost</div>
         <button class="btn-end-early" onclick="endSession(true)">End Session Early</button>
     </div>
 
     <div id="distraction-modal" class="view hidden">
         <div class="modal-title">How long were you distracted?</div>
-        
         <div class="picker-container">
             <div class="picker-highlight"></div>
-            
             <div class="cylinder-group">
                 <label>Minutes</label>
-                <div class="cylinder" id="cyl-min">
-                    <div class="spacer"></div>
-                    <div class="spacer"></div>
-                </div>
+                <div class="cylinder" id="cyl-min"><div class="spacer"></div><div class="spacer"></div></div>
             </div>
-
             <div class="cylinder-group">
                 <label>Seconds</label>
-                <div class="cylinder" id="cyl-sec">
-                    <div class="spacer"></div>
-                    <div class="spacer"></div>
-                </div>
+                <div class="cylinder" id="cyl-sec"><div class="spacer"></div><div class="spacer"></div></div>
             </div>
         </div>
-
         <button class="btn-main" onclick="confirmDistraction()">Log & Resume</button>
     </div>
 
@@ -415,11 +412,7 @@
         <h1 style="margin-bottom: 10px">Session Complete</h1>
         <div style="font-size: 4rem; font-weight: bold; margin-bottom: 10px;" id="summary-acc">--%</div>
         <div style="color: #666; margin-bottom: 40px;">Accuracy Score</div>
-        
-        <div style="margin-bottom: 20px; color: #888">
-            Duration: <span id="summary-dur" style="color:white">--</span> min
-        </div>
-
+        <div style="margin-bottom: 20px; color: #888">Duration: <span id="summary-dur" style="color:white">--</span> min</div>
         <button class="btn-main" onclick="goHome()">Finish</button>
     </div>
 
@@ -430,7 +423,10 @@
                 <button onclick="goHome()" style="font-size: 1.5rem;">&times;</button>
             </div>
 
-            <select id="week-select" class="week-dropdown" onchange="renderWeekStats()"></select>
+            <div class="history-controls">
+                <select id="week-select" class="week-dropdown" onchange="renderWeekStats()"></select>
+                <button class="btn-clear" onclick="clearHistory()">Clear All</button>
+            </div>
 
             <div class="history-filter">
                 <button class="filter-btn active" id="filt-all" onclick="setHistoryFilter('All')">All</button>
@@ -454,19 +450,9 @@
     </div>
 
 <script>
-    // --- STATE ---
-    let session = {
-        category: 'Focused Attention',
-        durationSec: 0,
-        elapsedSec: 0,
-        distractedSec: 0,
-        interval: null,
-        startTime: null
-    };
+    let session = { category: 'Focused Attention', durationSec: 0, elapsedSec: 0, distractedSec: 0, interval: null };
+    let historyFilter = 'All';
 
-    let historyFilter = 'All'; // State for history filtering
-
-    // --- DOM ELEMENTS ---
     const views = {
         menu: document.getElementById('view-menu'),
         session: document.getElementById('view-session'),
@@ -475,13 +461,8 @@
         history: document.getElementById('view-history')
     };
 
-    const els = {
-        timer: document.getElementById('timer-display'),
-        cylMin: document.getElementById('cyl-min'),
-        cylSec: document.getElementById('cyl-sec')
-    };
+    const els = { timer: document.getElementById('timer-display'), cylMin: document.getElementById('cyl-min'), cylSec: document.getElementById('cyl-sec') };
 
-    // --- INITIALIZATION ---
     function initCylinders() {
         populateCylinder(els.cylMin, 0, 180); 
         populateCylinder(els.cylSec, 1, 59);
@@ -503,15 +484,12 @@
 
     initCylinders();
 
-    // --- NAVIGATION ---
     function switchView(viewName) {
         Object.values(views).forEach(el => el.classList.add('hidden'));
         views[viewName].classList.remove('hidden');
     }
 
-    function goHome() {
-        switchView('menu');
-    }
+    function goHome() { switchView('menu'); }
 
     function setCategory(el, catName) {
         session.category = catName;
@@ -519,20 +497,14 @@
         el.classList.add('active');
     }
 
-    // --- SESSION LOGIC ---
     function startSession() {
         const mins = parseInt(document.getElementById('inp-duration').value);
         if(!mins || mins <= 0) return alert("Please enter a valid duration");
-
-        const showTimer = document.getElementById('inp-show-timer').checked;
-
         session.durationSec = mins * 60;
         session.elapsedSec = 0;
         session.distractedSec = 0;
-        
-        els.timer.style.opacity = showTimer ? "1" : "0";
+        els.timer.style.opacity = document.getElementById('inp-show-timer').checked ? "1" : "0";
         updateTimerDisplay();
-
         switchView('session');
         session.interval = setInterval(tick, 1000);
     }
@@ -540,10 +512,7 @@
     function tick() {
         session.elapsedSec++;
         updateTimerDisplay();
-
-        if (session.elapsedSec >= session.durationSec) {
-            endSession();
-        }
+        if (session.elapsedSec >= session.durationSec) endSession();
     }
 
     function updateTimerDisplay() {
@@ -562,140 +531,92 @@
 
     function getScrollValue(el) {
         const itemHeight = 50; 
-        const scrollPos = el.scrollTop;
-        const index = Math.round(scrollPos / itemHeight);
+        const index = Math.round(el.scrollTop / itemHeight);
         const items = el.querySelectorAll('.cylinder-item');
-        if(items[index]) return parseInt(items[index].dataset.val);
-        return 0; 
+        return items[index] ? parseInt(items[index].dataset.val) : 0;
     }
 
     function confirmDistraction() {
-        const m = getScrollValue(els.cylMin);
-        const s = getScrollValue(els.cylSec);
-        session.distractedSec += (m * 60) + s;
+        session.distractedSec += (getScrollValue(els.cylMin) * 60) + getScrollValue(els.cylSec);
         views.modal.classList.add('hidden');
         session.interval = setInterval(tick, 1000);
     }
 
     function endSession(early = false) {
         clearInterval(session.interval);
-        
         if (early) {
-            if (session.elapsedSec < 10) return goHome(); 
+            if (session.elapsedSec < 10) return goHome();
             session.durationSec = session.elapsedSec;
         }
-
         let ratio = session.distractedSec / session.durationSec;
-        if (ratio > 1) ratio = 1;
-        
-        const accuracy = Math.round(100 - (ratio * 100));
+        const accuracy = Math.round(100 - (Math.min(ratio, 1) * 100));
         const durationMin = Math.max(1, Math.round(session.durationSec / 60));
-
         saveData(accuracy, durationMin, session.category);
-
         document.getElementById('summary-acc').innerText = accuracy + "%";
         document.getElementById('summary-dur').innerText = durationMin;
         switchView('summary');
     }
 
-    // --- DATA & HISTORY ---
     function saveData(accuracy, duration, category) {
         const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
-        data.push({
-            timestamp: Date.now(),
-            accuracy: accuracy,
-            duration: duration,
-            category: category
-        });
+        data.push({ timestamp: Date.now(), accuracy, duration, category });
         localStorage.setItem('meditation_data_v2', JSON.stringify(data));
+    }
+
+    function clearHistory() {
+        if(confirm("Are you sure you want to delete all session history? This cannot be undone.")) {
+            localStorage.removeItem('meditation_data_v2');
+            goHome();
+        }
     }
 
     function getStartOfWeek(date) {
         const d = new Date(date);
-        const day = d.getDay(); 
-        const diff = d.getDate() - day;
-        d.setDate(diff);
+        d.setDate(d.getDate() - d.getDay());
         d.setHours(0,0,0,0);
         return d;
     }
 
     function showHistory() {
         const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
+        if (data.length === 0) return alert("No sessions recorded yet.");
         const weekSelect = document.getElementById('week-select');
-        
-        if (data.length === 0) {
-            alert("No sessions recorded yet.");
-            return;
-        }
-
         const weeks = {};
         data.forEach(entry => {
-            const date = new Date(entry.timestamp);
-            const weekStart = getStartOfWeek(date).toISOString();
+            const weekStart = getStartOfWeek(new Date(entry.timestamp)).toISOString();
             if (!weeks[weekStart]) weeks[weekStart] = [];
             weeks[weekStart].push(entry);
         });
-
         weekSelect.innerHTML = '';
-        const sortedWeeks = Object.keys(weeks).sort().reverse();
-        
-        sortedWeeks.forEach(weekKey => {
-            const sessions = weeks[weekKey];
-            const avgDur = Math.round(sessions.reduce((a, b) => a + b.duration, 0) / sessions.length);
-            const count = sessions.length;
+        Object.keys(weeks).sort().reverse().forEach(weekKey => {
             const d = new Date(weekKey);
-            const dateStr = `${d.getDate()}/${d.getMonth()+1}`;
-            
             const opt = document.createElement('option');
             opt.value = weekKey;
-            opt.text = `Week of ${dateStr} - (${count} sessions)`;
+            opt.text = `Week of ${d.getDate()}/${d.getMonth()+1}`;
             weekSelect.appendChild(opt);
         });
-
         switchView('history');
-        
-        // Reset filter to All when opening history
         setHistoryFilter('All'); 
     }
 
     function setHistoryFilter(filter) {
         historyFilter = filter;
-        
-        // Update UI Tabs
         document.getElementById('filt-all').classList.toggle('active', filter === 'All');
         document.getElementById('filt-fam').classList.toggle('active', filter === 'Focused Attention');
         document.getElementById('filt-omm').classList.toggle('active', filter === 'Open Monitoring');
-
         renderWeekStats();
     }
 
     function renderWeekStats() {
         const weekKey = document.getElementById('week-select').value;
         const data = JSON.parse(localStorage.getItem('meditation_data_v2') || '[]');
-        const list = document.getElementById('session-list');
+        let sessions = data.filter(e => getStartOfWeek(new Date(e.timestamp)).toISOString() === weekKey);
+        if (historyFilter !== 'All') sessions = sessions.filter(s => s.category === historyFilter);
         
-        // 1. Get all sessions for this week
-        let sessions = data.filter(entry => {
-            return getStartOfWeek(new Date(entry.timestamp)).toISOString() === weekKey;
-        }).sort((a,b) => b.timestamp - a.timestamp);
-
-        // 2. Apply Sub-Filter
-        if (historyFilter !== 'All') {
-            sessions = sessions.filter(s => s.category === historyFilter);
-        }
-
-        // 3. Calculate Stats for the Filtered Set
-        let totalAcc = 0;
-        let totalDur = 0;
-        
-        sessions.forEach(s => {
-            totalAcc += s.accuracy;
-            totalDur += s.duration;
-        });
-
-        const len = sessions.length; 
-        
+        const len = sessions.length;
         if (len > 0) {
+            const totalAcc = sessions.reduce((a, b) => a + b.accuracy, 0);
+            const totalDur = sessions.reduce((a, b) => a + b.duration, 0);
             document.getElementById('week-avg-acc').innerText = Math.round(totalAcc / len) + "%";
             document.getElementById('week-avg-dur').innerText = Math.round(totalDur / len) + "m";
         } else {
@@ -703,33 +624,22 @@
             document.getElementById('week-avg-dur').innerText = "--";
         }
 
-        // 4. Render List
-        list.innerHTML = '';
-        
-        if (len === 0) {
-            list.innerHTML = '<div style="text-align:center; margin-top:30px; color:#444; font-size:0.9rem">No sessions found for this category.</div>';
-            return;
-        }
-
-        sessions.forEach(s => {
+        const list = document.getElementById('session-list');
+        list.innerHTML = len === 0 ? '<div style="text-align:center; margin-top:30px; color:#444">No sessions found.</div>' : '';
+        sessions.sort((a,b) => b.timestamp - a.timestamp).forEach(s => {
             const div = document.createElement('div');
             div.className = 'session-item';
             const date = new Date(s.timestamp);
-            
             const isFam = s.category === 'Focused Attention';
-            const catLabel = isFam ? 'FAM' : 'OMM';
-            const tagClass = isFam ? 'tag-fam' : 'tag-omm';
-            
             div.innerHTML = `
                 <div class="session-meta">
-                    <div style="font-size:0.9rem">${date.toLocaleDateString()} <span style="color:#666">${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></div>
-                    <div class="session-tag ${tagClass}">${catLabel}</div>
+                    <div>${date.toLocaleDateString()} <span style="color:#666">${date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>
+                    <div class="session-tag ${isFam?'tag-fam':'tag-omm'}">${isFam?'FAM':'OMM'}</div>
                 </div>
                 <div class="session-right">
                     <div class="session-acc">${s.accuracy}%</div>
                     <div class="session-dur">${s.duration} min</div>
-                </div>
-            `;
+                </div>`;
             list.appendChild(div);
         });
     }
